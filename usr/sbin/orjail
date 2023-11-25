@@ -28,6 +28,7 @@ NOSETUPERROR=n
 HOSTTORRC=n
 NAMESPACE_EXIST=n
 PRIVATE_HOME=n
+EXIT_NODES=
 unset FIREJAILARGS
 
 # Functions
@@ -194,6 +195,9 @@ help_and_exit() {
   print N "                       Set custom DnsPort. By default $DNSPORT"
   print N "        --port-range <port>-<port>"
   print N "                       Generate random TransPort and DnsPort in the defined range."
+  print N "        --tor-exit-nodes <exitnode1>,[exitnode2],[exitnode3],..."
+  print N "                       Do not use spaces! Use Alpha-2 country codes (Two letter codes)."
+  print N "                       Sets ExitNodes option and StrictNodes 1. This may casue tor not to connect in case of unavailable exit node."
   exit "$1"
 }
 
@@ -342,6 +346,13 @@ while [[ $# -gt 0 ]]; do
       TRANSPORT="$2"
       shift
       [ "$TRANSPORT" ] || die "$key requires an argument."
+    ;;
+
+    # ExitNodes
+    --tor-exit-nodes)
+      EXIT_NODES="$2"
+      shift
+      [ "$EXIT_NODES" ] || die "$key requires an argument."
     ;;
 
     # EnableHostTorrc
@@ -569,6 +580,13 @@ if ! ip netns list | eno grep \\b"$NAME"\\b; then
   SOCKSPort 0
   RunAsDaemon 1
 EOF
+
+  if [[ -n "$EXIT_NODES" ]]; then
+    cat >> "$TORCONFIGFILE" <<EOF
+    StrictNodes 1
+    ExitNodes {${EXIT_NODES}}  
+EOF
+  fi
 
   if [[ "$HIDDENSERVICE" = y ]]; then
     HIDDENSERVICEDIR=${HIDDENSERVICEDIR:-/tmp/orjail-$NAME}
